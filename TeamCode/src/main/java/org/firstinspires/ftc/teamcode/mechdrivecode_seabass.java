@@ -75,8 +75,8 @@ public class mechdrivecode_seabass extends LinearOpMode {
     public DcMotor  rightDrive  = null; //the right drivetrain motor
     public DcMotor  leftDriveBack   = null; //the left drivetrain motor
     public DcMotor  rightDriveBack  = null; //the right drivetrain motor
-    public DcMotor  armMotor    = null; //the arm motor
-    public CRServo  intake      = null; //the active intake servo
+    public DcMotor liftMotor    = null; //the arm motor
+    //public CRServo  intake      = null; //the active intake servo
     public Servo    wrist       = null; //the wrist servo
 
     public double ArmTarget = 0.0;
@@ -153,7 +153,7 @@ public class mechdrivecode_seabass extends LinearOpMode {
         rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
         leftDriveBack  = hardwareMap.get(DcMotor.class, "left_drive_back");
         rightDriveBack = hardwareMap.get(DcMotor.class, "right_drive_back");
-        armMotor    = hardwareMap.get(DcMotor.class, "the_arm");
+        liftMotor    = hardwareMap.get(DcMotor.class, "lift");
 
 
          /* Most skid-steer/differential drive robots require reversing one motor to drive forward.
@@ -171,10 +171,10 @@ public class mechdrivecode_seabass extends LinearOpMode {
         rightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         leftDriveBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightDriveBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        armMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        liftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         /*This sets the maximum current that the control hub will apply to the arm before throwing a flag */
-        ((DcMotorEx) armMotor).setCurrentAlert(5,CurrentUnit.AMPS);
+        ((DcMotorEx) liftMotor).setCurrentAlert(5,CurrentUnit.AMPS);
 
 
          /* Before starting the armMotor. We'll make sure the TargetPosition is set to 0.
@@ -183,17 +183,17 @@ public class mechdrivecode_seabass extends LinearOpMode {
          /* armMotor.setTargetPosition(0);
          armMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
          armMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER); */
-        armMotor.setTargetPosition(0);
-        armMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        armMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODERS);
+        liftMotor.setTargetPosition(0);
+        liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        liftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODERS);
 
 
         /* Define and initialize servos.*/
-        intake = hardwareMap.get(CRServo.class, "intake");
+        //intake = hardwareMap.get(CRServo.class, "intake");
         wrist  = hardwareMap.get(Servo.class, "wrist");
 
         /* Make sure that the intake is off, and the wrist is folded in. */
-        intake.setPower(INTAKE_OFF);
+        //intake.setPower(INTAKE_OFF);
         wrist.setPosition(WRIST_FOLDED_IN);
 
         /* Send telemetry message to signify robot waiting */
@@ -236,13 +236,13 @@ public class mechdrivecode_seabass extends LinearOpMode {
              one cycle. Which can cause strange behavior. */
 
             if (gamepad1.a) {
-                intake.setPower(INTAKE_COLLECT);
+                //intake.setPower(INTAKE_COLLECT);
             }
             else if (gamepad1.x) {
-                intake.setPower(INTAKE_OFF);
+                //intake.setPower(INTAKE_OFF);
             }
             else if (gamepad1.b) {
-                intake.setPower(INTAKE_DEPOSIT);
+                //intake.setPower(INTAKE_DEPOSIT);
             }
 
             if (gamepad1.left_bumper) {
@@ -255,7 +255,7 @@ public class mechdrivecode_seabass extends LinearOpMode {
             if (gamepad1.dpad_left) {
                 /* This turns off the intake, folds in the wrist, and moves the arm
                 back to folded inside the robot. This is also the starting configuration */
-                intake.setPower(INTAKE_OFF);
+                //intake.setPower(INTAKE_OFF);
                 wrist.setPosition(WRIST_FOLDED_IN);
             }
 
@@ -284,21 +284,21 @@ public class mechdrivecode_seabass extends LinearOpMode {
                wrist.setPosition(WRIST_FOLDED_IN);
            }
 
-           armPcontroller();
+           liftPcontroller();
 
 
 
 
             /* Check to see if our arm is over the current limit, and report via telemetry. */
-            if (((DcMotorEx) armMotor).isOverCurrent()){
+            if (((DcMotorEx) liftMotor).isOverCurrent()){
                 telemetry.addLine("MOTOR EXCEEDED CURRENT LIMIT!");
             }
 
 
             /* send telemetry to the driver of the arm's current position and target position */
             telemetry.addData("armTarget: ", ArmTarget);
-            telemetry.addData("arm Encoder: ", armMotor.getCurrentPosition()/ARM_TICKS_PER_DEGREE);
-            telemetry.addData("arm Position: ", armPosition);
+            telemetry.addData("lift Encoder: ", liftMotor.getCurrentPosition()/ARM_TICKS_PER_DEGREE);
+            telemetry.addData("lift Position: ", armPosition);
             telemetry.update();
 
         }
@@ -329,13 +329,13 @@ public class mechdrivecode_seabass extends LinearOpMode {
         rightDriveBack.setPower(0);
     }
 
-    public void armPcontroller(){
-        armMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        double armPosition= (armMotor.getCurrentPosition())/ARM_TICKS_PER_DEGREE;
+    public void liftPcontroller(){
+        liftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        double armPosition= (liftMotor.getCurrentPosition())/ARM_TICKS_PER_DEGREE;
         double error = ArmTarget - armPosition;
         double kp=1.00/10;
         double speed=kp*error;
-        armMotor.setPower(speed);
+        liftMotor.setPower(speed);
         telemetry.addData("arm Position: ", armPosition);
         telemetry.addData("arm speed: ", speed);
 
