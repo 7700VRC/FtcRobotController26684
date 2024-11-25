@@ -129,6 +129,8 @@ public class mechdrivecode_seabass extends LinearOpMode {
 
     /* Variables that are used to set the arm to a specific position */
     double armPosition = (int)ARM_COLLAPSED_INTO_ROBOT;
+
+    double wristPosition = 0.5;
     double armPositionFudgeFactor;
 
 
@@ -146,6 +148,8 @@ public class mechdrivecode_seabass extends LinearOpMode {
         double left_x;
         double right_y;
         double right_x;
+
+
 
 
         /* Define and Initialize Motors */
@@ -246,17 +250,17 @@ public class mechdrivecode_seabass extends LinearOpMode {
             }
 
             if (gamepad1.left_bumper) {
-                ArmTarget = ArmTarget+0.5;
+                ArmTarget = ArmTarget+2;
             }
-            else if (gamepad1.left_trigger>=0.5) {
-                ArmTarget = ArmTarget-0.5;
+            else if (gamepad1.left_trigger>=0.2) {
+                ArmTarget = ArmTarget-2;
             }
 
             if (gamepad1.dpad_left) {
                 /* This turns off the intake, folds in the wrist, and moves the arm
                 back to folded inside the robot. This is also the starting configuration */
                 //intake.setPower(INTAKE_OFF);
-                wrist.setPosition(WRIST_FOLDED_IN);
+                //wrist.setPosition(WRIST_FOLDED_IN);
             }
 
             //else if (gamepad1.dpad_right){
@@ -276,13 +280,20 @@ public class mechdrivecode_seabass extends LinearOpMode {
                 //wrist.setPosition(WRIST_FOLDED_IN);
 
 
-           if (gamepad1.right_trigger>0.5) {
-                wrist.setPosition(WRIST_FOLDED_OUT);
+           if (gamepad1.right_bumper) {
+               if(wristPosition>=0.00 && wristPosition<0.95) {
+                   wristPosition += 0.05;
+
+               }
 
             }
-           else if (gamepad1.right_bumper) {
-               wrist.setPosition(WRIST_FOLDED_IN);
+           if (gamepad1.right_trigger>0.2) {
+               if(wristPosition>0.05 && wristPosition<=1.0) {
+                   wristPosition -= 0.05;
+               }
            }
+           wrist.setPosition(wristPosition);
+
 
            liftPcontroller();
 
@@ -299,6 +310,8 @@ public class mechdrivecode_seabass extends LinearOpMode {
             telemetry.addData("armTarget: ", ArmTarget);
             telemetry.addData("lift Encoder: ", liftMotor.getCurrentPosition()/ARM_TICKS_PER_DEGREE);
             telemetry.addData("lift Position: ", armPosition);
+            telemetry.addData("wrist Position: ", wristPosition);
+
             telemetry.update();
 
         }
