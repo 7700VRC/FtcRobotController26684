@@ -189,7 +189,7 @@ public class mechdrivecode_seabass extends LinearOpMode {
          armMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER); */
         liftMotor.setTargetPosition(0);
         liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        liftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODERS);
+        liftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
 
         /* Define and initialize servos.*/
