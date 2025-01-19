@@ -71,15 +71,22 @@ import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 public class mechdrivecode_seabass extends LinearOpMode {
 
     /* Declare OpMode members. */
-    public DcMotor  leftDrive   = null; //the left drivetrain motor
-    public DcMotor  rightDrive  = null; //the right drivetrain motor
-    public DcMotor  leftDriveBack   = null; //the left drivetrain motor
-    public DcMotor  rightDriveBack  = null; //the right drivetrain motor
-    public DcMotor liftMotor    = null; //the arm motor
-    //public CRServo  intake      = null; //the active intake servo
-    public Servo    wrist       = null; //the wrist servo
+    public DcMotor leftDrive = null; //the left drivetrain motor
+    public DcMotor rightDrive = null; //the right drivetrain motor
+    public DcMotor leftDriveBack = null; //the left drivetrain motor
+    public DcMotor rightDriveBack = null; //the right drivetrain motor
+    public DcMotor liftMotor = null; //the arm motor
+    public DcMotor liftRightMotor = null; //right arm motor
+
+
+    public CRServo intake = null; //the active intake servo
+    public Servo wrist = null; //the wrist servo\
+    public Servo wrist_right = null; //new wrist servo
+
 
     public double ArmTarget = 0.0;
+
+    public double ArmTargetRight = 0.0;
     /* This constant is the number of encoder ticks for each degree of rotation of the arm.
     To find this, we first need to consider the total gear reduction powering our arm.
     First, we have an external 20t:100t (5:1) reduction created by two spur gears.
@@ -93,7 +100,7 @@ public class mechdrivecode_seabass extends LinearOpMode {
             28 // number of encoder ticks per rotation of the bare motor
                     * 250047.0 / 4913.0 // This is the exact gear ratio of the 50.9:1 Yellow Jacket gearbox
                     * 100.0 / 20.0 // This is the external gear reduction, a 20T pinion gear that drives a 100T hub-mount gear
-                    * 1/360.0; // we want ticks per degree, not per rotation
+                    * 1 / 360.0; // we want ticks per degree, not per rotation
 
 
      /* These constants hold the position that the arm is commanded to run to.
@@ -107,30 +114,31 @@ public class mechdrivecode_seabass extends LinearOpMode {
      If you'd like it to move further, increase that number. If you'd like it to not move
      as far from the starting position, decrease it. */
 
-    final double ARM_COLLAPSED_INTO_ROBOT  = 0;
-    final double ARM_COLLECT               = 230 * ARM_TICKS_PER_DEGREE;
-    final double ARM_CLEAR_BARRIER         = 230 * ARM_TICKS_PER_DEGREE;
-    final double ARM_SCORE_SPECIMEN        = 160 * ARM_TICKS_PER_DEGREE;
-    final double ARM_SCORE_SAMPLE_IN_LOW   = 160 * ARM_TICKS_PER_DEGREE;
-    final double ARM_ATTACH_HANGING_HOOK   = 120 * ARM_TICKS_PER_DEGREE;
-    final double ARM_WINCH_ROBOT           = 15  * ARM_TICKS_PER_DEGREE;
+    final double ARM_COLLAPSED_INTO_ROBOT = 0;
+    final double ARM_COLLECT = 230 * ARM_TICKS_PER_DEGREE;
+    final double ARM_CLEAR_BARRIER = 230 * ARM_TICKS_PER_DEGREE;
+    final double ARM_SCORE_SPECIMEN = 160 * ARM_TICKS_PER_DEGREE;
+    final double ARM_SCORE_SAMPLE_IN_LOW = 160 * ARM_TICKS_PER_DEGREE;
+    final double ARM_ATTACH_HANGING_HOOK = 120 * ARM_TICKS_PER_DEGREE;
+    final double ARM_WINCH_ROBOT = 15 * ARM_TICKS_PER_DEGREE;
 
     /* Variables to store the speed the intake servo should be set at to intake, and deposit game elements. */
-    final double INTAKE_COLLECT    = -1.0;
-    final double INTAKE_OFF        =  0.0;
-    final double INTAKE_DEPOSIT    =  0.5;
+    final double INTAKE_COLLECT = -1.0;
+    final double INTAKE_OFF = 0.0;
+    final double INTAKE_DEPOSIT = 0.5;
 
     /* Variables to store the positions that the wrist should be set to when folding in, or folding out. */
-    final double WRIST_FOLDED_IN   = 0.3;
-    final double WRIST_FOLDED_OUT  = 0.65;
+    final double WRIST_FOLDED_IN = 0.3;
+    final double WRIST_FOLDED_OUT = 0.65;
 
     /* A number in degrees that the triggers can adjust the arm position by */
     final double FUDGE_FACTOR = 15 * ARM_TICKS_PER_DEGREE;
 
     /* Variables that are used to set the arm to a specific position */
-    double armPosition = (int)ARM_COLLAPSED_INTO_ROBOT;
+    double armPosition = (int) ARM_COLLAPSED_INTO_ROBOT;
 
     double wristPosition = 0.5;
+    double wristPositionRight = 0.5;
     double armPositionFudgeFactor;
 
 
@@ -153,11 +161,14 @@ public class mechdrivecode_seabass extends LinearOpMode {
 
 
         /* Define and Initialize Motors */
-        leftDrive  = hardwareMap.get(DcMotor.class, "left_drive");
+        leftDrive = hardwareMap.get(DcMotor.class, "left_drive");
         rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
-        leftDriveBack  = hardwareMap.get(DcMotor.class, "left_drive_back");
+        leftDriveBack = hardwareMap.get(DcMotor.class, "left_drive_back");
         rightDriveBack = hardwareMap.get(DcMotor.class, "right_drive_back");
-        liftMotor    = hardwareMap.get(DcMotor.class, "lift");
+        liftMotor = hardwareMap.get(DcMotor.class, "lift_motor_left");
+        liftRightMotor = hardwareMap.get(DcMotor.class, "lift_motor_right");
+
+
 
 
          /* Most skid-steer/differential drive robots require reversing one motor to drive forward.
@@ -176,9 +187,11 @@ public class mechdrivecode_seabass extends LinearOpMode {
         leftDriveBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightDriveBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         liftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        liftRightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
 
         /*This sets the maximum current that the control hub will apply to the arm before throwing a flag */
-        ((DcMotorEx) liftMotor).setCurrentAlert(5,CurrentUnit.AMPS);
+        ((DcMotorEx) liftMotor).setCurrentAlert(5, CurrentUnit.AMPS);
 
 
          /* Before starting the armMotor. We'll make sure the TargetPosition is set to 0.
@@ -191,14 +204,24 @@ public class mechdrivecode_seabass extends LinearOpMode {
         liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         liftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
+        liftRightMotor.setTargetPosition(0);
+        liftRightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        liftRightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+
 
         /* Define and initialize servos.*/
         //intake = hardwareMap.get(CRServo.class, "intake");
-        wrist  = hardwareMap.get(Servo.class, "wrist");
+        wrist = hardwareMap.get(Servo.class, "wrist");
+        wrist_right = hardwareMap.get(Servo.class, "wrist_right");
+        intake = hardwareMap.get(CRServo.class, "intake");
+
 
         /* Make sure that the intake is off, and the wrist is folded in. */
-        //intake.setPower(INTAKE_OFF);
-        wrist.setPosition(WRIST_FOLDED_IN);
+        intake.setPower(0);
+
+        wrist.setPosition(0.5);
+        wrist_right.setPosition(0.5);
 
         /* Send telemetry message to signify robot waiting */
         telemetry.addLine("Robot Ready.");
@@ -215,13 +238,13 @@ public class mechdrivecode_seabass extends LinearOpMode {
              the joysticks decrease as you push them up. So reverse the Y axis. */
             left_y = -gamepad1.left_stick_y;
             left_x = gamepad1.left_stick_x;
-            right_x  = gamepad1.right_stick_x;
+            right_x = gamepad1.right_stick_x;
 
 
 
 
             /* Set the motor power to the variables we've mixed and normalized call drive function*/
-            driveMechanum(left_y,left_x,right_x);
+            driveMechanum(left_y, left_x, right_x);
 
 
 
@@ -240,20 +263,19 @@ public class mechdrivecode_seabass extends LinearOpMode {
              one cycle. Which can cause strange behavior. */
 
             if (gamepad1.a) {
-                //intake.setPower(INTAKE_COLLECT);
-            }
-            else if (gamepad1.x) {
-                //intake.setPower(INTAKE_OFF);
-            }
-            else if (gamepad1.b) {
-                //intake.setPower(INTAKE_DEPOSIT);
+                intake.setPower(INTAKE_COLLECT);
+            } else if (gamepad1.x) {
+                intake.setPower(INTAKE_OFF);
+            } else if (gamepad1.b) {
+                intake.setPower(INTAKE_DEPOSIT);
             }
 
             if (gamepad1.left_bumper) {
-                ArmTarget = ArmTarget+2;
-            }
-            else if (gamepad1.left_trigger>=0.2) {
-                ArmTarget = ArmTarget-2;
+                ArmTarget = ArmTarget - 2;
+                ArmTargetRight = ArmTargetRight + 2;
+            } else if (gamepad1.left_trigger >= 0.2) {
+                ArmTarget = ArmTarget + 2;
+                ArmTargetRight = ArmTargetRight - 2;
             }
 
             if (gamepad1.dpad_left) {
@@ -264,8 +286,8 @@ public class mechdrivecode_seabass extends LinearOpMode {
             }
 
             //else if (gamepad1.dpad_right){
-                /* This is the correct height to score SPECIMEN on the HIGH CHAMBER */
-               // wrist.setPosition(WRIST_FOLDED_IN);
+            /* This is the correct height to score SPECIMEN on the HIGH CHAMBER */
+            // wrist.setPosition(WRIST_FOLDED_IN);
             //}
 
             /*else if (gamepad1.dpad_up){
@@ -276,39 +298,44 @@ public class mechdrivecode_seabass extends LinearOpMode {
 
             else if (gamepad1.dpad_down){
                 /* this moves the arm down to lift the robot up once it has been hooked */
-                //intake.setPower(INTAKE_OFF);
-                //wrist.setPosition(WRIST_FOLDED_IN);
+            //intake.setPower(INTAKE_OFF);
+            //wrist.setPosition(WRIST_FOLDED_IN);
 
 
-           if (gamepad1.right_bumper) {
-               if(wristPosition>=0.00 && wristPosition<0.95) {
-                   wristPosition += 0.05;
+            if (gamepad1.right_bumper) {
+                if (wristPosition >= 0.00 && wristPosition < 0.95) {
+                    wristPosition += 0.05;
+                    wristPositionRight -= 0.05;
 
-               }
+
+                }
 
             }
-           if (gamepad1.right_trigger>0.2) {
-               if(wristPosition>0.05 && wristPosition<=1.0) {
-                   wristPosition -= 0.05;
-               }
-           }
-           wrist.setPosition(wristPosition);
+            if (gamepad1.right_trigger > 0.2) {
+                if (wristPosition > 0.05 && wristPosition <= 1.0) {
+                    wristPosition -= 0.05;
+                    wristPositionRight += 0.05;
+                }
+            }
+            wrist.setPosition(wristPosition);
+            wrist_right.setPosition(wristPositionRight);
 
 
-           liftPcontroller();
+            liftPcontroller();
+            liftPcontrollerRight();
 
 
 
 
             /* Check to see if our arm is over the current limit, and report via telemetry. */
-            if (((DcMotorEx) liftMotor).isOverCurrent()){
+            if (((DcMotorEx) liftMotor).isOverCurrent()) {
                 telemetry.addLine("MOTOR EXCEEDED CURRENT LIMIT!");
             }
 
 
             /* send telemetry to the driver of the arm's current position and target position */
             telemetry.addData("armTarget: ", ArmTarget);
-            telemetry.addData("lift Encoder: ", liftMotor.getCurrentPosition()/ARM_TICKS_PER_DEGREE);
+            telemetry.addData("lift Encoder: ", liftMotor.getCurrentPosition() / ARM_TICKS_PER_DEGREE);
             telemetry.addData("lift Position: ", armPosition);
             telemetry.addData("wrist Position: ", wristPosition);
 
@@ -316,13 +343,15 @@ public class mechdrivecode_seabass extends LinearOpMode {
 
         }
     }
+
     public void driveMechanum(double y, double x, double spin) {
-        leftDrive.setPower(y+x+spin);
-        leftDriveBack.setPower(y-x+spin);
-        rightDrive.setPower(y-x-spin);
-        rightDriveBack.setPower(y+x-spin);
+        leftDrive.setPower(y + x + spin);
+        leftDriveBack.setPower(y - x + spin);
+        rightDrive.setPower(y - x - spin);
+        rightDriveBack.setPower(y + x - spin);
         sleep(10);
     }
+
     //right = positive, up = positive, left = negative, down = negative, s = super duper more awesome
     // than grandma grandpas and other peeps, sydney p.s. no one likes dand
     public void driveTank(double leftSpeed, double rightSpeed) {
@@ -342,16 +371,26 @@ public class mechdrivecode_seabass extends LinearOpMode {
         rightDriveBack.setPower(0);
     }
 
-    public void liftPcontroller(){
+    public void liftPcontroller() {
         liftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        double armPosition= (liftMotor.getCurrentPosition())/ARM_TICKS_PER_DEGREE;
+        double armPosition = (liftMotor.getCurrentPosition()) / ARM_TICKS_PER_DEGREE;
         double error = ArmTarget - armPosition;
-        double kp=1.00/10;
-        double speed=kp*error;
+        double kp = 1.00 / 10;
+        double speed = kp * error;
         liftMotor.setPower(speed);
-        telemetry.addData("arm Position: ", armPosition);
-        telemetry.addData("arm speed: ", speed);
+        telemetry.addData("left arm Position: ", armPosition);
+        telemetry.addData("left arm speed: ", speed);
 
+    }
 
+    public void liftPcontrollerRight() {
+        liftRightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        double armPosition = (liftRightMotor.getCurrentPosition()) / ARM_TICKS_PER_DEGREE;
+        double error = ArmTargetRight - armPosition;
+        double kp = 1.00 / 10;
+        double speed = kp * error;
+        liftRightMotor.setPower(speed);
+        telemetry.addData("right arm Position: ", armPosition);
+        telemetry.addData("right arm speed: ", speed);
     }
 }
